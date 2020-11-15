@@ -1,5 +1,6 @@
 name: Release CLI to the GitHub Release
 on:
+  deployment:
 
 env:
   GO_VERSION: 1.15
@@ -32,10 +33,23 @@ jobs:
         uses: kyoh86/git-vertag-action@v1
         with:
           # method: "major", "minor" or "patch" to update tag with semver
-          method: ""
+          method: "${{ github.event.deployment.task }}"
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: release --rm-dist
+      - name: Update Deployment Status (success)
+        uses: chrnorm/deployment-status@releases/v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          state: success
+          deployment_id: ${{ github.event.deployment.id }}
+      - name: Update deployment status (failure)
+        if: failure()
+        uses: chrnorm/deployment-status@releases/v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          state: failure
+          deployment_id: ${{ github.event.deployment.id }}
